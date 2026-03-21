@@ -1,0 +1,22 @@
+{
+  "name": "zephyr-ami-builder",
+  "version": "1.0.0",
+  "description": "CDK stack — EC2 Image Builder for Zephyr RTOS AMI (Ubuntu 24.04 arm64 / Graviton)",
+  "main": "bin/app.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "aws-cdk": "^2.1112.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.7.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.244.0",
+    "constructs": "^10.5.1",
+    "source-map-support": "^0.5.21"
+  }
+}
