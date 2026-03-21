@@ -81,97 +81,106 @@ Validate the complete SoCA embedded SDLC pipeline on the simplest and fastest-bo
 
 ### Step-by-Step Workflow
 
-```
-Step 1 · REQUEST TARGET NODE
-  ├── Log into SOCA portal
-  ├── Select Software Stack: "Zephyr-RTOS-Dev-arm64"
-  └── Launch → EC2 Graviton boots, User Data runs bootstrap automatically
+**1. Request Target Node**
+- Log into SOCA portal
+- Select Software Stack: `Zephyr-RTOS-Dev-arm64`
+- Launch — EC2 Graviton boots, User Data runs bootstrap automatically
 
-Step 2 · CONNECT
-  ├── VSCode → Remote-SSH → <EC2_PRIVATE_IP>
-  ├── VSCode Server installs Zephyr IDE extension server-side
-  └── Open terminal — venv is already active via .bashrc:
-        source zephyrproject/.venv/bin/activate
-  Clone github guidance repo: git clone https://github.com/aws-samples/sample-sdlc-using-kiro-and-zephyr-on-edh.git
-  cd sample-sdlc-using-kiro-and-zephyr-on-edh
-
-Step 3 · AI CO-PILOT ONLINE
-  ├── kiro-cli (in terminal or chat panel)
-  └── Kiro context: "I am working on qemu_cortex_m3 with Zephyr RTOS
-        I want the existing example in ~/zephyrproject/zephyr/samples/net/mqtt_publisher as a fresh
-        example in sample-sdlc-using-kiro-and-zephyr-on-edh/src - Copy it over"
-
-Step 4 · BUILD
-  ├── cd ~/zephyrproject/zephyr
-  ├── west build -p -b qemu_cortex_m3 ~/sample-sdlc-using-kiro-and-zephyr-on-edh/src/mqtt_pub
-  ├── [on error] → paste to Kiro CLI → Kiro diagnoses
-  └── Expected: Build directory at ~/zephyrproject/build/
-
-
-Install mosquitto: sudo apt install net-tools
-
-Step 5 · RUN IN QEMU
-  ├── west build -t run
-  ├── QEMU boots Zephyr, serial output appears in terminal
-  └── Expected output:
-        *** Booting Zephyr OS build v4.x.x ***
-        Hello World! qemu_cortex_m3
-
-Step 7 · SENSOR POLLING SAMPLE
-  ├── west build -b qemu_cortex_m3 zephyr/samples/sensor/fxos8700
-  │   (or stub sensor via CONFIG_SENSOR_SHELL=y)
-  ├── prj.conf: CONFIG_SENSOR=y
-  │             CONFIG_SHELL=y
-  └── Kiro prompt: "Add a Zephyr sensor stub that returns simulated
-        temperature readings every 500ms and prints via printk"
-
-Step 8 · ITERATE
-  ├── Edit source in VSCode → west build -t run → observe output
-  ├── Kiro assists: Kconfig options, Zephyr API calls, DeviceTree stubs
-  └── All changes persisted on EC2 EBS volume
-
-Step 9 · RELEASE
-  ├── Snapshot workspace to S3/EFS
-  └── Terminate SOCA Target Node (cost control)
+**2. Connect & Clone**
+- VSCode → Remote-SSH → `<EC2_PRIVATE_IP>`
+- Open terminal — venv is already active via `.bashrc`
+- Clone the repo:
+```bash
+git clone https://github.com/aws-samples/sample-sdlc-using-kiro-and-zephyr-on-edh.git
+cd sample-sdlc-using-kiro-and-zephyr-on-edh
 ```
 
-### Expected Serial Output
+**3. AI Co-Pilot Online**
+- Start `kiro` in the terminal — use it throughout for errors, config questions, and code generation
 
+**4. Build**
+```bash
+cd ~/zephyrproject/zephyr
+west build -p -b qemu_cortex_m3 \
+    ~/sample-sdlc-using-kiro-and-zephyr-on-edh/src/mqtt_pub
 ```
-*** Booting Zephyr OS build v4.x.x-xxx ***
-[00:00:00.000] Hello World! qemu_cortex_m3
-[00:00:00.500] sensor: temp=22.50 C
-[00:00:01.000] sensor: temp=22.51 C
+- On error → paste the error to Kiro → Kiro diagnoses and fixes
+
+**5. Set Up SLIP Networking** *(required for MQTT over QEMU — open a second terminal and keep it running)*
+```bash
+cd ~/sample-sdlc-using-kiro-and-zephyr-on-edh/src/mqtt_pub
+./setup-net.sh
 ```
+What `setup-net.sh` does:
+1. Builds `tunslip6` from net-tools (once, if not already compiled)
+2. `sudo loop-socat.sh` — creates `/tmp/slip.sock` (PTY ↔ UNIX socket)
+3. `sudo net-setup.sh` — brings up `zeth` TAP interface (`192.0.2.2/24`)
+4. `sudo tunslip6` — bridges `/tmp/slip.dev` ↔ `zeth`
+
+Verify: `ip addr show zeth` should show `inet 192.0.2.2/24`
+
+**6. Configure Mosquitto** *(one-time)*
+```bash
+sudo tee /etc/mosquitto/conf.d/local.conf << 'EOF'
+listener 1883 0.0.0.0
+allow_anonymous true
+EOF
+sudo systemctl restart mosquitto
+```
+
+**7. Run in QEMU** *(second terminal)*
+```bash
+cd ~/zephyrproject/zephyr
+west build -t run
+```
+Expected serial output:
+```
+*** Booting Zephyr OS build v4.3.x ***
+[00:00:00.000,000] <inf> net_config: IPv4 address: 192.0.2.1
+[00:00:00.000,000] <inf> net_mqtt_publisher_sample: attempting to connect:
+[00:00:00.350,000] <inf> net_mqtt_publisher_sample: CONNECTED
+```
+
+**8. Verify MQTT Messages** *(third terminal)*
+```bash
+mosquitto_sub -t sensors
+```
+Expected:
+```
+DOORS:OPEN_QoS0
+DOORS:OPEN_QoS1
+DOORS:OPEN_QoS2
+```
+
+**9. Iterate**
+- Edit `src/mqtt_pub/src/main.c` or `prj.conf` in VSCode
+- Rebuild: `cd ~/zephyrproject/zephyr && west build -b qemu_cortex_m3 ~/sample-sdlc-using-kiro-and-zephyr-on-edh/src/mqtt_pub`
+- Re-run: `west build -t run`
+- Kiro assists with Kconfig options, Zephyr API, topic/payload changes
+
+**10. Release**
+- Snapshot workspace to S3/EFS
+- Terminate SOCA Target Node (cost control)
+
+### Key Config Values (prj.conf)
+
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| `CONFIG_NET_SLIP_TAP` | `y` | SLIP networking for QEMU |
+| `CONFIG_NET_CONFIG_MY_IPV4_ADDR` | `"192.0.2.1"` | QEMU guest IP |
+| `CONFIG_NET_CONFIG_PEER_IPV4_ADDR` | `"192.0.2.2"` | Host broker IP (zeth) |
+| `CONFIG_ETH_STELLARIS` | `n` | Disable conflicting built-in NIC |
 
 ### Kiro CLI Prompts & Tips
 
 ```
-"Set up a Zephyr hello world project for qemu_cortex_m3.
- Workspace is at /opt/zephyrproject/, venv at /opt/zephyrproject/.venv/"
-"Why does west build fail with 'DT_N_NODELABEL_uart0_P_STATUS_IDX_0_EXISTS'?"
-"Add a CONFIG_SENSOR stub that returns simulated temperature every 500ms"
-"Show me how to use Zephyr's printk vs LOG_INF for debug output"
+"west build fails with 'No Qemu ethernet driver configured' on qemu_cortex_m3"
+"mqtt_connect returns -116 — how do I debug SLIP networking on QEMU?"
+"How do I change the MQTT topic and payload in the mqtt_publisher sample?"
+"Add a Zephyr sensor stub that publishes simulated temperature via MQTT"
 ```
 
 ---
-
-## Case 2: `qemu_cortex_r5` — Real-Time Safety-Critical Application
-
-### Board Profile
-
-| Property | Value |
-|----------|-------|
-| **Board name** | `qemu_cortex_r5` |
-| **Emulated platform** | Xilinx ZynqMP RPU (Real-time Processing Unit) |
-| **Architecture** | ARM Cortex-R5F |
-| **Serial** | Xilinx PS UART |
-| **Timer** | Xilinx PS Triple-Timer Counter (TTC) @ 1000 Hz |
-| **Interrupt controller** | ARM GIC v1 |
-| **IPC** | Xilinx IPI (Inter-Processor Interrupt) mailbox |
-| **Ethernet** | Xilinx GEM (4 instances) |
-| **Zephyr status** | Not actively maintained — stable for QEMU use |
-| **Docs** | https://docs.zephyrproject.org/latest/boards/qemu/cortex_r5/doc/index.html |
 
 ### Goal
 
