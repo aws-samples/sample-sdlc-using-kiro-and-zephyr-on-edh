@@ -8,7 +8,7 @@ AI-assisted embedded software development on AWS using **Zephyr RTOS**, **Kiro C
 ## What's in this repo
 
 ```
-embedded-sdlc-using-zephyr-and-kiro-cli/
+sample-sdlc-using-kiro-and-zephyr-on-edh/
 └── deployment/                   CDK stack — automates EDH Target Node AMI builds
     ├── bin/app.ts                 CDK app entry point (ZephyrAmiStack)
     ├── lib/zephyr-ami-stack.ts    EC2 Image Builder pipeline definition
