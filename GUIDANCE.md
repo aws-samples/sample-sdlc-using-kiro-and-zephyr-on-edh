@@ -91,25 +91,26 @@ Step 2 · CONNECT
   ├── VSCode → Remote-SSH → <EC2_PRIVATE_IP>
   ├── VSCode Server installs Zephyr IDE extension server-side
   └── Open terminal — venv is already active via .bashrc:
-        source /opt/zephyrproject/.venv/bin/activate
+        source zephyrproject/.venv/bin/activate
+  Clone github guidance repo: git clone https://github.com/aws-samples/sample-sdlc-using-kiro-and-zephyr-on-edh.git
+  cd sample-sdlc-using-kiro-and-zephyr-on-edh
 
 Step 3 · AI CO-PILOT ONLINE
   ├── kiro-cli (in terminal or chat panel)
-  └── Kiro context: "I am working on qemu_cortex_m3 with Zephyr RTOS.
-        Workspace: /opt/zephyrproject/  SDK: /opt/zephyr-sdk/"
+  └── Kiro context: "I am working on qemu_cortex_m3 with Zephyr RTOS
+        I want the existing example in ~/zephyrproject/zephyr/samples/net/mqtt_publisher as a fresh
+        example in sample-sdlc-using-kiro-and-zephyr-on-edh/src - Copy it over"
 
-Step 4 · CREATE PROJECT — Hello World
-  ├── Zephyr IDE → PROJECTS → Create from Template → Hello World
-  ├── Board: qemu_cortex_m3
-  └── Build config: Debug
-
-Step 5 · BUILD
-  ├── cd /opt/zephyrproject
-  ├── west build -b qemu_cortex_m3 zephyr/samples/hello_world
+Step 4 · BUILD
+  ├── cd ~/zephyrproject/zephyr
+  ├── west build -p -b qemu_cortex_m3 ~/sample-sdlc-using-kiro-and-zephyr-on-edh/src/mqtt_pub
   ├── [on error] → paste to Kiro CLI → Kiro diagnoses
-  └── Expected: Build directory at /opt/zephyrproject/build/
+  └── Expected: Build directory at ~/zephyrproject/build/
 
-Step 6 · RUN IN QEMU
+
+Install mosquitto: sudo apt install net-tools
+
+Step 5 · RUN IN QEMU
   ├── west build -t run
   ├── QEMU boots Zephyr, serial output appears in terminal
   └── Expected output:
