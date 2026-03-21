@@ -101,14 +101,15 @@ cd sample-sdlc-using-kiro-and-zephyr-on-edh
 **4. Build**
 ```bash
 cd ~/zephyrproject/zephyr
+source .venv/bin/activate
 west build -p -b qemu_cortex_m3 \
-    ~/sample-sdlc-using-kiro-and-zephyr-on-edh/src/mqtt_pub
+    ~/sample-sdlc-using-kiro-and-zephyr-on-edh/cases/mqtt_pub
 ```
 - On error → paste the error to Kiro → Kiro diagnoses and fixes
 
 **5. Set Up SLIP Networking** *(required for MQTT over QEMU — open a second terminal and keep it running)*
 ```bash
-cd ~/sample-sdlc-using-kiro-and-zephyr-on-edh/src/mqtt_pub
+cd ~/sample-sdlc-using-kiro-and-zephyr-on-edh/cases/mqtt_pub
 ./setup-net.sh
 ```
 What `setup-net.sh` does:
@@ -130,6 +131,7 @@ sudo systemctl restart mosquitto
 
 **7. Run in QEMU** *(second terminal)*
 ```bash
+sudo chmod 777 /tmp/slip.sock
 cd ~/zephyrproject/zephyr
 west build -t run
 ```
@@ -153,8 +155,8 @@ DOORS:OPEN_QoS2
 ```
 
 **9. Iterate**
-- Edit `src/mqtt_pub/src/main.c` or `prj.conf` in VSCode
-- Rebuild: `cd ~/zephyrproject/zephyr && west build -b qemu_cortex_m3 ~/sample-sdlc-using-kiro-and-zephyr-on-edh/src/mqtt_pub`
+- Edit `cases/mqtt_pub/src/main.c` or `prj.conf` in VSCode
+- Rebuild: `cd ~/zephyrproject/zephyr && west build -b qemu_cortex_m3 ~/sample-sdlc-using-kiro-and-zephyr-on-edh/cases/mqtt_pub`
 - Re-run: `west build -t run`
 - Kiro assists with Kconfig options, Zephyr API, topic/payload changes
 
