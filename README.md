@@ -1,6 +1,6 @@
 # embedded-sdlc-using-zephyr-and-kiro-cli
 
-AI-assisted embedded software development on AWS using **Zephyr RTOS**, **Kiro CLI**, and **EDH ([Engineering Development Hub]())**. Firmware runs on QEMU-emulated MCU targets (Cortex-M3, R5, A53) on Graviton EC2 nodes — no physical hardware required.
+AI-assisted embedded software development on AWS using **Zephyr RTOS**, **Kiro CLI**, and **EDH ([Engineering Development Hub](https://awslabs.github.io/engineering-development-hub-documentation/))**. Firmware runs on QEMU-emulated MCU targets (Cortex-M3, R5, A53) on Graviton EC2 nodes — no physical hardware required.
 
 
 ---
